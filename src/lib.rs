@@ -1,6 +1,7 @@
 use log::{error, info};
 use std::io;
 use std::net::{TcpListener, TcpStream};
+use std::thread;
 use std::{env, net::SocketAddr};
 
 pub fn launch_tcp_server(
@@ -11,6 +12,7 @@ pub fn launch_tcp_server(
     let listener = TcpListener::bind(addr)?;
 
     for stream in listener.incoming() {
+        thread::spawn(move || {
         if let Err(e) = stream
             .and_then(|stream| {
                 info!("received connection from {}", stream.peer_addr()?);
@@ -18,8 +20,9 @@ pub fn launch_tcp_server(
             })
             .and_then(handle_client)
         {
-            error!("{}", e)
+                error!("{}", e);
         }
+        });
     }
     Ok(())
 }
