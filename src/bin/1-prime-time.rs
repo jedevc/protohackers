@@ -1,24 +1,12 @@
 use env_logger;
 use log::debug;
-use serde::{Deserialize, Serialize};
 use std::{
     io::{self, BufRead, Write},
     net::{Shutdown, TcpStream},
 };
 
 use protohackers as ph;
-
-#[derive(Serialize, Deserialize)]
-struct Request {
-    method: String,
-    number: serde_json::Number,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Response {
-    method: String,
-    prime: bool,
-}
+use protohackers::prime_time::{is_prime, Request, Response};
 
 fn main() -> std::io::Result<()> {
     env_logger::init();
@@ -40,7 +28,7 @@ fn handle_client(mut stream: TcpStream) -> std::io::Result<()> {
             Ok(req) => {
                 let resp = Response {
                     method: req.method,
-                    prime: req.number.as_u64().map(ph::is_prime).unwrap_or(false),
+                    prime: req.number.as_u64().map(is_prime).unwrap_or(false),
                 };
                 serde_json::to_writer(&stream, &resp)?;
             }
