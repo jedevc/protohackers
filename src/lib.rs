@@ -1,6 +1,7 @@
 use log::{error, info};
+use std::error::Error;
 use std::io;
-use std::net::{TcpListener, TcpStream};
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::thread;
 use std::{env, net::SocketAddr};
 
@@ -9,23 +10,26 @@ pub mod prime_time;
 
 pub fn launch_tcp_server(
     addr: SocketAddr,
-    handle_client: fn(TcpStream) -> io::Result<()>,
+    handle_client: fn(&TcpStream) -> Result<(), Box<dyn Error>>,
 ) -> io::Result<()> {
     info!("listening on {}", addr);
     let listener = TcpListener::bind(addr)?;
 
     for stream in listener.incoming() {
-        thread::spawn(move || {
-            if let Err(e) = stream
-                .and_then(|stream| {
-                    info!("received connection from {}", stream.peer_addr()?);
-                    Ok(stream)
-                })
-                .and_then(handle_client)
-            {
+        match stream {
+            Ok(stream) => {
+                info!("received connection from {}", stream.peer_addr()?);
+                thread::spawn(move || {
+                    if let Err(e) = handle_client(&stream) {
+                        error!("{}", e);
+                    }
+                    _ = stream.shutdown(Shutdown::Both);
+                });
+            }
+            Err(e) => {
                 error!("{}", e);
             }
-        });
+        };
     }
     Ok(())
 }

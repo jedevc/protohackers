@@ -1,9 +1,5 @@
 use env_logger;
-use std::{
-    io::Read,
-    io::Write,
-    net::{Shutdown, TcpStream},
-};
+use std::{error::Error, io::Read, io::Write, net::TcpStream};
 
 use protohackers as ph;
 
@@ -14,15 +10,14 @@ fn main() -> std::io::Result<()> {
     ph::launch_tcp_server(addr, handle_client)
 }
 
-fn handle_client(mut stream: TcpStream) -> std::io::Result<()> {
+fn handle_client(mut stream: &TcpStream) -> Result<(), Box<dyn Error>> {
     let mut buff = [0u8; 1024];
     loop {
         let n = stream.read(&mut buff)?;
         if n == 0 {
             break;
         }
-        stream.write(&buff[..n])?;
+        stream.write_all(&buff[..n])?;
     }
-    stream.shutdown(Shutdown::Both)?;
     Ok(())
 }

@@ -1,8 +1,9 @@
 use env_logger;
 use log::debug;
 use std::{
+    error::Error,
     io::{self, BufRead, Write},
-    net::{Shutdown, TcpStream},
+    net::TcpStream,
 };
 
 use protohackers as ph;
@@ -15,30 +16,31 @@ fn main() -> std::io::Result<()> {
     ph::launch_tcp_server(addr, handle_client)
 }
 
-fn handle_client(mut stream: TcpStream) -> std::io::Result<()> {
+fn handle_client(mut stream: &TcpStream) -> Result<(), Box<dyn Error>> {
     let rstream = io::BufReader::new(stream.try_clone()?);
     for line in rstream.lines() {
         let line = line?;
         debug!("got line {}", line);
         match serde_json::from_str::<Request>(&line) {
-            Ok(req) if req.method != "isPrime" => {
-                debug!("unknown method {}", req.method);
-                stream.write("{}".as_bytes())?;
-            }
-            Ok(req) => {
+            Ok(req) if req.method == "isPrime" => {
                 let resp = Response {
                     method: req.method,
                     prime: req.number.as_u64().map(is_prime).unwrap_or(false),
                 };
-                serde_json::to_writer(&stream, &resp)?;
+                serde_json::to_writer(stream, &resp)?;
+                stream.write_all("\n".as_bytes())?;
+            }
+            Ok(req) => {
+                debug!("unknown method {}", req.method);
+                stream.write_all("{}\n".as_bytes())?;
+                break;
             }
             Err(e) => {
                 debug!("{}", e);
-                stream.write("{}".as_bytes())?;
+                stream.write_all("{}\n".as_bytes())?;
+                break;
             }
         }
-        stream.write("\n".as_bytes())?;
     }
-    stream.shutdown(Shutdown::Both)?;
     Ok(())
 }
