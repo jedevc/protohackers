@@ -2,14 +2,14 @@ use env_logger;
 use log::debug;
 use std::{
     error::Error,
-    io::{self, BufRead, Write},
+    io::{self, BufRead, BufReader, Write},
     net::TcpStream,
 };
 
 use protohackers as ph;
 use protohackers::prime_time::{is_prime, Request, Response};
 
-fn main() -> std::io::Result<()> {
+fn main() -> io::Result<()> {
     env_logger::init();
 
     let addr = ph::bind_addr();
@@ -17,10 +17,9 @@ fn main() -> std::io::Result<()> {
 }
 
 fn handle_client(mut stream: &TcpStream) -> Result<(), Box<dyn Error>> {
-    let rstream = io::BufReader::new(stream.try_clone()?);
+    let rstream = BufReader::new(stream.try_clone()?);
     for line in rstream.lines() {
         let line = line?;
-        debug!("got line {}", line);
         match serde_json::from_str::<Request>(&line) {
             Ok(req) if req.method == "isPrime" => {
                 let resp = Response {

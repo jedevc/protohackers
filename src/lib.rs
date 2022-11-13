@@ -5,13 +5,14 @@ use std::net::{Shutdown, TcpListener, TcpStream};
 use std::thread;
 use std::{env, net::SocketAddr};
 
+pub mod budget_chat;
 pub mod means_to_an_end;
 pub mod prime_time;
 
-pub fn launch_tcp_server(
-    addr: SocketAddr,
-    handle_client: fn(&TcpStream) -> Result<(), Box<dyn Error>>,
-) -> io::Result<()> {
+pub fn launch_tcp_server<F>(addr: SocketAddr, handle_client: F) -> io::Result<()>
+where
+    F: FnMut(&TcpStream) -> Result<(), Box<dyn Error>> + Clone + Send + 'static,
+{
     info!("listening on {}", addr);
     let listener = TcpListener::bind(addr)?;
 
@@ -19,6 +20,7 @@ pub fn launch_tcp_server(
         match stream {
             Ok(stream) => {
                 info!("received connection from {}", stream.peer_addr()?);
+                let mut handle_client = handle_client.clone();
                 thread::spawn(move || {
                     if let Err(e) = handle_client(&stream) {
                         error!("{}", e);
