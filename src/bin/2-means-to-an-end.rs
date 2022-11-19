@@ -8,11 +8,13 @@ use std::{
 use protohackers as ph;
 use protohackers::means_to_an_end::{Request, Response, DB};
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     let addr = ph::bind_addr();
-    ph::launch_tcp_server(addr, handle_client)
+    ph::launch_tcp_server(addr, handle_client)?;
+
+    Ok(())
 }
 
 fn handle_client(mut stream: &TcpStream) -> Result<(), Box<dyn Error>> {

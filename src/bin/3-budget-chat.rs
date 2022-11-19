@@ -10,11 +10,13 @@ use std::{
 use protohackers as ph;
 use protohackers::budget_chat::{is_legal_name, Message, Room};
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     let addr = ph::bind_addr();
-    ph::launch_tcp_server(addr, make_handle_client())
+    ph::launch_tcp_server(addr, make_handle_client())?;
+
+    Ok(())
 }
 
 fn make_handle_client(
